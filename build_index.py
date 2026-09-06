@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, gzip, hashlib, json, shutil
+import argparse, gzip, hashlib, json, os, shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from huggingface_hub import HfApi
@@ -34,7 +34,11 @@ def build(output_dir: Path, web_html: Path, chunk_size: int) -> None:
     (output_dir / "manifest.json").unlink(missing_ok=True)
     shutil.copy2(web_html, output_dir / "index.html")
 
-    api = HfApi(token=False)
+    token = os.environ.get("HF_TOKEN")
+    if not token:
+        raise SystemExit("HF_TOKEN is missing. Add it as a GitHub Actions repository secret.")
+
+    api = HfApi(token=token)
     chunks, current = [], []
     counts = {"model": 0, "dataset": 0, "space": 0}
     total = 0
@@ -62,7 +66,7 @@ def build(output_dir: Path, web_html: Path, chunk_size: int) -> None:
         "chunk_size": chunk_size,
         "chunks": chunks,
         "randomness": "Web Crypto getRandomValues with rejection sampling",
-        "scope": "All repositories anonymously visible via Hugging Face Hub during this build."
+        "scope": "All public repositories visible to the authenticated Hugging Face account during this build."
     }
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
