@@ -16,18 +16,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_HUB_ENABLE_HF_TRANSFER: "0"
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
+
       - name: Install dependency
         run: pip install -r requirements.txt
+
+      - name: Verify Hugging Face token exists
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "Missing HF_TOKEN repository secret."
+            exit 1
+          fi
+
       - name: Build full public Hub snapshot
-        run: python build_index.py --output site --chunk-size 25000
+        run: python -u build_index.py --output site --chunk-size 25000
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
